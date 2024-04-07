@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-vip-lb
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: kube-vip-lb
+  template:
+    metadata:
+      labels:
+        app: kube-vip-lb
+    spec:
+      volumes:
+      - name: bird-config
+        emptyDir:
+          medium: ""
+      imagePullSecrets:
+      - name: ghcr-crimsonfez
+      initContainers:
+      - name: bird-gen-config
+        image: ghcr.io/404incorporated/kube-vip-bird2:v1.0.2
+        volumeMounts:
+        - name: bird-config
+          mountPath: /etc/bird
+        command:  
+        - "bird-gen-config"
+        - "/bird.conf.tmpl"
+        - "/etc/bird/bird.conf"
+        env:
+        - name: PEERS
+          value: "192.168.100.11:64512"
+        securityContext:
+          runAsUser: 1000
+      containers:
+      - name: bird
+        image: ghcr.io/404incorporated/kube-vip-bird2:v1.0.2
+        tty: true
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_TIME
+            - SYS_ADMIN
+        volumeMounts:
+        - name: bird-config
+          mountPath: /etc/bird
+      - name: kube-vip
+        image: ghcr.io/kube-vip/kube-vip-iptables:v0.7.2
+        imagePullPolicy: Always
+        args:
+        - manager
+        env:
+        - name: vip_arp
+          value: "true"
+        - name: vip_cidr
+          value: "32"
+        - name: dns_mode
+          value: first
+        - name: vip_interface
+          value: "lo"
+        - name: vip_servicesinterface
+          value: "lo"
+        - name: svc_enable
+          value: "true"
+        - name: svc_leasename
+          value: plndr-svcs-lock
+        - name: svc_election
+          value: "false"
+        - name: lb_class_only
+          value: "false"
+        - name: lb_class_name
+          value: "kube-vip"
+        - name: enable_service_security
+          value: "true"
+        - name: enable_node_labeling
+          value: "true"
+        - name: prometheus_server
+          value: :2113
+        resources: {}
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_TIME
+            - SYS_ADMIN
+            - SETPCAP
+      hostNetwork: true
+      serviceAccountName: kube-vip
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+  updateStrategy: {}
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
