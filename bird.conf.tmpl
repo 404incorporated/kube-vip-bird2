@@ -1,0 +1,26 @@
+log syslog all;
+protocol device {}
+protocol direct {
+    ipv4;
+    interface "lo";
+}
+filter bgp_out {
+    if net ~ 127.0.0.0/8 then {
+        reject;
+    } else {
+        accept;
+    }
+}
+template bgp ToR {
+    local as 65000;
+    ipv4 {
+        table master4;
+        import none;
+        export filter bgp_out;
+    };
+}
+{{- range $index, $peer := .}}
+protocol bgp r{{$index}} from ToR {
+    neighbor {{.IP}} as {{.AS}};
+}
+{{- end}}
