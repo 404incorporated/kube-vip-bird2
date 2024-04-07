@@ -4,22 +4,19 @@ RUN cd /src && go build && chmod +x /src/bird-gen-config
 
 FROM debian:bullseye
 
-ENV BIRD_RUN_USER=bird
-ENV BIRD_RUN_GROUP=bird
-ENV BIRD_RUN_DIR=/run/bird
-ENV BIRD_ARGS=""
+RUN adduser --disabled-password --uid 1000 bird
 
 RUN --mount=type=cache,target=/var/cache/apt apt update && apt install -y \
     bird2 \
     procps \
     inetutils-traceroute
 
-RUN mkdir -p ${BIRD_RUN_DIR}
+RUN mkdir -p /run/bird && chown bird:bird /run/bird
 
-COPY --chown=${BIRD_RUN_USER}:${BIRD_RUN_GROUP} --chmod=775 start.sh /start.sh
+COPY --chmod=775 start.sh /start.sh
 
 COPY --from=build --chmod=775 /src/bird-gen-config /usr/local/bin/bird-gen-config
 
-COPY bird.conf.tmpl /etc/bird/bird.conf.tmpl
+COPY --chown=bird:bird bird.conf.tmpl /bird.conf.tmpl
 
 CMD ["/start.sh"]
