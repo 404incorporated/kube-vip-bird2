@@ -19,4 +19,4 @@ COPY --from=build --chmod=775 /src/bird-gen-config /usr/local/bin/bird-gen-confi
 
 COPY --chown=bird:bird bird.conf.tmpl /bird.conf.tmpl
 
-CMD ["/start.sh"]
+ENTRYPOINT [ "/usr/sbin/bird", "-d" ]
