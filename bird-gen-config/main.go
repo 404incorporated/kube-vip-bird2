@@ -16,9 +16,20 @@ func main() {
 
 	var Peers []Peer
 
+	type Config struct {
+		WatchInterface string
+		Peers          []Peer
+	}
+
 	peersEnv := os.Getenv("PEERS")
 	if peersEnv == "" {
 		fmt.Println("PEERS environment variable not set")
+		os.Exit(1)
+	}
+
+	watchInterfaceEnv := os.Getenv("WATCH_INTERFACE")
+	if watchInterfaceEnv == "" {
+		fmt.Println("WATCH_INTERFACE is not set")
 		os.Exit(1)
 	}
 
@@ -54,7 +65,12 @@ func main() {
 		panic(err)
 	}
 
-	err = tmpl.Execute(file, Peers)
+	config := Config{
+		Peers:          Peers,
+		WatchInterface: watchInterfaceEnv,
+	}
+
+	err = tmpl.Execute(file, config)
 	if err != nil {
 		panic(err)
 	}

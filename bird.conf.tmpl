@@ -2,7 +2,7 @@ log syslog all;
 protocol device {}
 protocol direct {
     ipv4;
-    interface "lo";
+    interface "{{.WatchInterface}}";
 }
 filter bgp_out {
     if net ~ 127.0.0.0/8 then {
@@ -19,7 +19,7 @@ template bgp ToR {
         export filter bgp_out;
     };
 }
-{{- range $index, $peer := .}}
+{{- range $index, $peer := .Peers}}
 protocol bgp r{{$index}} from ToR {
     neighbor {{.IP}} as {{.AS}};
 }
